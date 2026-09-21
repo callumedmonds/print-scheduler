@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Print Scheduler</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖨️</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/>
+    </svg>
+    <div>
+      <h1>Print Scheduler</h1>
+      <p class="tagline">Queue documents to print when you want them</p>
+    </div>
+  </div>
+  <div class="status" id="status-pill"><span class="dot"></span><span id="status-text">connecting…</span></div>
+</header>
+
+<main>
+  <section class="panel form-panel">
+    <h2>Schedule a print</h2>
+    <form id="job-form" autocomplete="off">
+      <fieldset class="field">
+        <legend>Document</legend>
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-source="upload" role="tab">Upload a file</button>
+          <button type="button" class="tab" data-source="path" role="tab">Use a file on this PC</button>
+        </div>
+        <div class="source-pane" data-pane="upload">
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="file-input" name="file">
+            <span class="dz-icon">📄</span>
+            <span class="dz-text">Drop a file here or <u>browse</u></span>
+            <span class="dz-hint">PDF, images, plain text — anything your printer accepts</span>
+          </label>
+        </div>
+        <div class="source-pane hidden" data-pane="path">
+          <input type="text" id="source-path" name="source_path" placeholder="/home/callum/Documents/jobsheet.pdf">
+          <label class="check">
+            <input type="checkbox" id="live-mode" name="live">
+            <span>Re-read the file each time it prints
+              <small>Leave off to print a snapshot taken now. Turn on for a file that gets regenerated, like a daily job sheet.</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="row">
+        <label class="field">
+          <span class="label">Job name</span>
+          <input type="text" id="name" name="name" placeholder="(from the file name)">
+        </label>
+        <label class="field narrow">
+          <span class="label">Copies</span>
+          <input type="number" id="copies" name="copies" value="1" min="1" max="999">
+        </label>
+      </div>
+
+      <fieldset class="field">
+        <legend>When</legend>
+        <div class="segmented" id="kind-picker">
+          <button type="button" class="seg active" data-kind="once">Once</button>
+          <button type="button" class="seg" data-kind="daily">Every day</button>
+          <button type="button" class="seg" data-kind="weekly">Weekly</button>
+          <button type="button" class="seg" data-kind="interval">Repeating</button>
+        </div>
+
+        <div class="when-pane" data-kind="once">
+          <input type="datetime-local" id="run-at" name="run_at">
+        </div>
+        <div class="when-pane hidden" data-kind="daily">
+          <label class="inline"><span>at</span><input type="time" id="time-daily" value="09:00"></label>
+        </div>
+        <div class="when-pane hidden" data-kind="weekly">
+          <div class="daypicker" id="daypicker"></div>
+          <label class="inline"><span>at</span><input type="time" id="time-weekly" value="09:00"></label>
+        </div>
+        <div class="when-pane hidden" data-kind="interval">
+          <label class="inline"><span>every</span>
+            <input type="number" id="interval-amount" value="60" min="1" max="10080" class="narrow-input">
+            <select id="interval-unit"><option value="1">minutes</option><option value="60">hours</option></select>
+          </label>
+        </div>
+      </fieldset>
+
+      <details class="advanced">
+        <summary>Printer options</summary>
+        <div class="row">
+          <label class="field">
+            <span class="label">Printer</span>
+            <select id="printer" name="printer"><option value="">System default</option></select>
+          </label>
+          <label class="field">
+            <span class="label">Sides</span>
+            <select id="sides">
+              <option value="">Printer default</option>
+              <option value="one-sided">Single sided</option>
+              <option value="two-sided-long-edge">Double sided (long edge)</option>
+              <option value="two-sided-short-edge">Double sided (short edge)</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span class="label">Extra lp options</span>
+          <input type="text" id="options" name="options" placeholder="media=A4 print-color-mode=monochrome">
+        </label>
+      </details>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="submit-btn">Schedule it</button>
+        <span class="form-msg" id="form-msg"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Scheduled prints</h2>
+      <span class="count" id="job-count"></span>
+    </div>
+    <div id="jobs"><p class="empty">Loading…</p></div>
+
+    <div class="panel-head spaced">
+      <h2>Recent activity</h2>
+      <button type="button" class="ghost" id="refresh-btn">Refresh</button>
+    </div>
+    <div id="runs"><p class="empty">Nothing has printed yet.</p></div>
+  </section>
+</main>
+
+<div class="toast-wrap" id="toasts"></div>
+<script src="/app.js"></script>
+</body>
+</html>

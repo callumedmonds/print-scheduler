@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Launcher: runs the app straight from this checkout, no install needed.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec env PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" python3 -m printsched "$@"
