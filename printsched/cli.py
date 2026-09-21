@@ -199,6 +199,54 @@ def cmd_tick(args: argparse.Namespace) -> int:
         conn.close()
 
 
+def _server_is_up(timeout: float = 1.5) -> bool:
+    import urllib.error
+    import urllib.request
+
+    url = f"http://{config.HOST}:{config.PORT}/api/state"
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"X-Printsched": "1"}), timeout=timeout):
+            return True
+    except (urllib.error.URLError, OSError):
+        return False
+
+
+def cmd_open(args: argparse.Namespace) -> int:
+    """Open the web app, starting the background service first if it is not up.
+
+    This is what the desktop menu entry runs, so it must cope with the service
+    already owning the port rather than trying to bind it a second time.
+    """
+    import subprocess
+    import time
+    import webbrowser
+
+    url = f"http://{config.HOST}:{config.PORT}"
+    if not _server_is_up():
+        started = subprocess.run(
+            ["systemctl", "--user", "start", "print-scheduler.service"],
+            capture_output=True, text=True,
+        )
+        if started.returncode != 0:
+            print("The scheduler service is not installed. Run ./install.sh, "
+                  "or start it in a terminal with: printsched serve", file=sys.stderr)
+            return 1
+        for _ in range(20):  # give it a moment to bind the port
+            if _server_is_up(timeout=0.5):
+                break
+            time.sleep(0.25)
+
+    webbrowser.open(url)
+    print(f"Print Scheduler: {url}")
+    return 0
+
+
+def cmd_applet(args: argparse.Namespace) -> int:
+    from .applet import main as applet_main
+
+    return applet_main()
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     from .server import serve
 
@@ -212,7 +260,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Schedule documents to print at a time you choose.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
-  printsched serve                                   open the web app
+  printsched open                                    open the web app
+  printsched applet                                  show the tray icon
   printsched add invoice.pdf --at "2026-09-22 09:00"
   printsched add jobsheet.pdf --daily 08:30 --copies 2
   printsched add rota.pdf --weekly mon,fri@07:45 --live
@@ -226,6 +275,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_serve.add_argument("--port", type=int, default=config.PORT)
     p_serve.add_argument("--no-browser", action="store_true", help="do not open a browser window")
     p_serve.set_defaults(func=cmd_serve)
+
+    p_open = sub.add_parser("open", help="open the web app, starting the service if needed")
+    p_open.set_defaults(func=cmd_open)
+
+    p_applet = sub.add_parser("applet", help="show the tray icon")
+    p_applet.set_defaults(func=cmd_applet)
 
     p_add = sub.add_parser("add", help="schedule a document")
     p_add.add_argument("file")

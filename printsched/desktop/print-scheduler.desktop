@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Print Scheduler
+GenericName=Scheduled printing
+Comment=Queue documents to print at a time you choose
+Icon=print-scheduler
+Categories=Utility;Printing;
+Keywords=print;printer;schedule;queue;timer;
+Exec=__EXEC__ open
+Terminal=false
+StartupNotify=false

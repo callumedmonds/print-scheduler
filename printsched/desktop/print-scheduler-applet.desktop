@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Print Scheduler Applet
+Comment=Tray icon showing upcoming scheduled prints
+Icon=print-scheduler
+Categories=Utility;Printing;
+Exec=__EXEC__ applet
+Terminal=false
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

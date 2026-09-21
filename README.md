@@ -17,7 +17,9 @@ every weekday, whether or not anyone thinks about it.
 ## What it gives you
 
 - **A small web app** at `http://127.0.0.1:8765` — drag a file in, pick when, done
+- **A tray applet** showing what's coming up, with one click to print early
 - **A CLI** for the same thing, handy for scripting
+- **Starts at boot**, so a schedule set once keeps running
 - **Four schedule types** — once, daily, chosen weekdays, or every N minutes/hours
 - **Snapshot or live files** — print a frozen copy, or re-read the file each time
   so a regenerated document always prints its latest version
@@ -43,14 +45,58 @@ cd print-scheduler
 ./bin/printsched serve
 ```
 
-That opens the web app and starts the scheduler. Keep the terminal open, or
-install it as a background service so it starts with your session:
+That opens the web app and starts the scheduler, for as long as the terminal
+stays open.
+
+## Install it properly
 
 ```bash
 ./install.sh
 ```
 
-Remove the service again with `./uninstall.sh`.
+That sets up three things:
+
+| | |
+|---|---|
+| **Background service** | systemd user unit, enabled at boot, restarts on failure |
+| **Tray applet** | autostarts with your desktop session |
+| **Menu entry** | "Print Scheduler" under Utility |
+
+The applet appears in your system tray. Left-click opens the web app;
+right-click lists what's coming up — clicking a job prints it early without
+disturbing its schedule — and lets you start or stop the scheduler.
+
+Start the tray icon straight away without logging out:
+
+```bash
+./bin/printsched applet &
+```
+
+### Running before you log in
+
+A systemd *user* service normally starts when you log in. To have the
+scheduler run from boot on a machine nobody is sitting at:
+
+```bash
+sudo loginctl enable-linger $USER
+```
+
+On a normal desktop you can skip this — starting at login is usually what you
+want, and the applet needs a desktop session anyway.
+
+Remove all of it with `./uninstall.sh`. Your schedules and history are kept.
+
+### Desktop support
+
+The applet uses AppIndicator where it exists and falls back to
+`Gtk.StatusIcon`, which Cinnamon, XFCE, MATE and KDE all show. It needs
+`python3-gi` and `gir1.2-gtk-3.0`, both standard on a Debian desktop.
+
+GNOME 45+ hides legacy tray icons; there, install AppIndicator support:
+
+```bash
+sudo apt install gir1.2-ayatanaappindicator3-0.1
+```
 
 ## Using the CLI
 
@@ -67,6 +113,8 @@ printsched add rota.pdf --weekly mon,fri@07:45 --live
 # Every two hours, double sided
 printsched add checklist.pdf --every 2h -o sides=two-sided-long-edge
 
+printsched open                 # open the web app
+printsched applet               # show the tray icon
 printsched list                 # what is scheduled
 printsched runs                 # what has printed
 printsched run 3                # print job 3 right now
@@ -155,7 +203,7 @@ same trust boundary as your printer itself.
 python3 -m unittest discover -s tests -t .
 ```
 
-65 tests, no dependencies, nothing printed — the CUPS layer is mocked.
+73 tests, no dependencies, nothing printed — the CUPS layer is mocked.
 
 ## Project layout
 
@@ -167,7 +215,9 @@ printsched/
   scheduler.py   the background loop
   server.py      JSON API and static files
   cli.py         command line front end
+  applet.py      system tray icon and menu
   web/           the browser UI (no build step, no CDN)
+  desktop/       icon, menu entry and autostart templates
 ```
 
 ## Licence
